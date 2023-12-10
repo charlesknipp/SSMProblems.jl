@@ -47,6 +47,9 @@ function emission_logdensity end
 # Include utils and adjacent code
 include("utils/particles.jl")
 
+import .Utils: ParticleContainer, Particle, linearize
+
 export AbstractStateSpaceModel, AbstractFilter
+export ParticleContainer, Particle, linearize
 
 end
