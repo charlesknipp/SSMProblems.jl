@@ -12,6 +12,18 @@ abstract type AbstractStateSpaceModel <: AbstractMCMC.AbstractModel end
 abstract type AbstractParticleCache end
 
 """
+    Abstract Filter
+"""
+abstract type AbstractFilter end
+
+"""
+    filter_step!(rng, model, filter[, particles, observation])
+
+Generates a sample of filtered states for a given state space model. The algorithm used for filtering is dependent on the provided filter
+"""
+function filter_step! end
+
+"""
     transition!!(rng, model[, state, timestep, cache])
 
 Simulate the particle for the next time step from the forward dynamics.
@@ -35,6 +47,6 @@ function emission_logdensity end
 # Include utils and adjacent code
 include("utils/particles.jl")
 
-export AbstractStateSpaceModel
+export AbstractStateSpaceModel, AbstractFilter
 
 end
