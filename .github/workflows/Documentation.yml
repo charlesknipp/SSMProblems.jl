@@ -43,11 +43,48 @@ jobs:
               Pkg.develop(PackageSpec(path="./SSMProblems"));
           end;
           Pkg.instantiate();'
-      - name: Build and deploy
-        uses: TuringLang/actions/DocsDocumenter@main
+      # - name: Build and deploy
+        # uses: TuringLang/actions/DocsDocumenter@main
+        # with:
+        #   pkg_path: ${{ matrix.pkg.dir }}
+        #   doc-path: ${{ matrix.pkg.dir }}/docs
+        #   doc-make-path: ${{ matrix.pkg.dir }}/docs/make.jl
+        #   doc-build-path: ${{ matrix.pkg.dir }}/docs/build
+        #   dirname: ${{ matrix.pkg.name }}
+      - name: Build docs
+        shell: bash
+        run: julia --project=${{ matrix.pkg.dir }}/docs ${{ matrix.pkg.dir }}/docs/make.jl
+  
+        # We want to use the same version of DocsNav. In principle we would like
+        # to write `uses: TuringLang/actions/DocsNav@${{ github.action_ref }}`,
+        # but the `uses` block doesn't allow for expressions. As a workaround,
+        # this step symlinks the actions directory to a fixed path so that we can
+        # use it later.
+        # See https://github.com/orgs/community/discussions/41927
+      - name: Symlink actions folder to a fixed path
+        env:
+          GH_ACTION_REPO: ${{ github.action_repository }}
+          GH_ACTION_REF: ${{ github.action_ref }}
+        shell: bash
+        run: ln -s /home/runner/work/_actions/$GH_ACTION_REPO/$GH_ACTION_REF/  /home/runner/work/_actions/current
+  
+      - name: Insert navbar
+        # Using the path symlinked in the previous step
+        uses: ./../../_actions/current/DocsNav
         with:
-          pkg_path: ${{ matrix.pkg.dir }}
-          doc-path: ${{ matrix.pkg.dir }}/docs
-          doc-make-path: ${{ matrix.pkg.dir }}/docs/make.jl
-          doc-build-path: ${{ matrix.pkg.dir }}/docs/build
-          dirname: ${{ matrix.pkg.name }}
+          doc-path: ${{ matrix.pkg.dir }}/docs/build
+          navbar-url: ${{ github.action_path }}/../DocsNav/scripts/TuringNavbar.html
+          # exclude-paths: ${{ inputs.exclude-paths }}
+  
+      - name: Deploy docs to gh-pages branch
+        # if: ${{ inputs.deploy == 'true' }}
+        working-directory: ${{ matrix.pkg.dir }}/docs
+        shell: julia --color=yes --project=. {0}
+        # Must pass `root` when `deploydocs()` is run from outside make.jl file
+        # Also, `root` must be an absolute path (hence the call to `pwd()`)
+        run: |
+          using Documenter
+          deploydocs(; root=pwd(), repo="github.com/${{ github.repository }}.git", dirname="${{ matrix.pkg.name }}", push_preview=true)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          JULIA_DEBUG: Documenter
